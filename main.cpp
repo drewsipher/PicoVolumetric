@@ -1,72 +1,59 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
-#include "hardware/i2c.h"
+#include "hardware/spi.h"
 
-#define D0 0
-#define D1 1
-#define D2 2
-#define D3 3
-#define D4 4
-#define D5 5
-#define D6 6
-#define D7 7
+// #define D0 0
+// #define D1 1
+// #define D2 2
+// #define D3 3
+// #define D4 4
+// #define D5 5
+// #define D6 6
+// #define D7 7
 
-#define CS 28
+// #define CS 28
 #define DC 27
 #define RST 26
-#define EN 22
-#define RW 21
+// #define EN 22
+// #define RW 21
 
 #define LED 25
+
+
+static inline void cs_select() {
+    asm volatile("nop \n nop \n nop");
+    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 0);  // Active low
+    asm volatile("nop \n nop \n nop");
+}
+
+static inline void cs_deselect() {
+    asm volatile("nop \n nop \n nop");
+    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 1);
+    asm volatile("nop \n nop \n nop");
+}
+
+static void write_byte(uint8_t byte) {
+    uint8_t buf[1];
+    // buf[0] = reg & 0x7f;  // remove read bit as this is a write
+    // buf[1] = data;
+    buf[0] = byte;
+    cs_select();
+    spi_write_blocking(spi_default, buf, 1);
+    cs_deselect();
+    // sleep_ms(10);
+}
 
 void writeCommand(uint8_t command)
 {
     gpio_put(DC, false); //Command low
-
-    gpio_put(CS, false); //CS LOW to Enable
-    
-    //write command to D0-D7
-    // gpio_put_masked(0x000000FF, 0x00000000 | command);
-    gpio_put(D0, (command >> 0) & 0x01);
-    gpio_put(D1, (command >> 1) & 0x01);
-    gpio_put(D2, (command >> 2) & 0x01);
-    gpio_put(D3, (command >> 3) & 0x01);
-    gpio_put(D4, (command >> 4) & 0x01);
-    gpio_put(D5, (command >> 5) & 0x01);
-    gpio_put(D6, (command >> 6) & 0x01);
-    gpio_put(D7, (command >> 7) & 0x01);
-
-    gpio_put(RW, false); //clear Read Write
-    sleep_us(100);
-    gpio_put(RW, true); //set Read Write
-    sleep_us(100);
-
-    gpio_put(CS, true); //CS HIGH 
+    write_byte(command);
 }
 
 void writeData(uint8_t data)
 {
     gpio_put(DC, true); //Data high
-
-    gpio_put(CS, false); //CS LOW to Enable
-
-    //write data to D0-D7
-    //gpio_put_masked(0x000000FF, 0x00000000 | data);
-    gpio_put(D0, (data >> 0) & 0x01);
-    gpio_put(D1, (data >> 1) & 0x01);
-    gpio_put(D2, (data >> 2) & 0x01);
-    gpio_put(D3, (data >> 3) & 0x01);
-    gpio_put(D4, (data >> 4) & 0x01);
-    gpio_put(D5, (data >> 5) & 0x01);
-    gpio_put(D6, (data >> 6) & 0x01);
-    gpio_put(D7, (data >> 7) & 0x01);
-
-    gpio_put(RW, false); //clear Read Write
-    sleep_us(100);
-    gpio_put(RW, true); //set Read Write
-    sleep_us(100);
-    gpio_put(CS, true); //CS HIGH 
+    write_byte(data);
 }
 
 void SetStartColumn(uint8_t d)
@@ -100,11 +87,10 @@ void Fill_RAM(uint8_t data)
 
 void OLED_init()
 {
-    gpio_put(EN, false);
-    gpio_put(CS, false); //clear Chip Select
+    // gpio_put(EN, false);
+    // gpio_put(CS, false); //clear Chip Select
+    cs_deselect();
 
-    //gpio_put(RST, true);
-    //sleep_ms(1);
     gpio_put(RST, false);
     sleep_ms(1);
     gpio_put(RST, true);
@@ -114,9 +100,9 @@ void OLED_init()
     writeCommand(0x12);
     writeCommand(0xAE);
     writeCommand(0xD5);
-    writeCommand(0x30);
+    writeCommand(0xF0);
     writeCommand(0xA8);
-    writeCommand(0x37);
+    writeCommand(0x3F);
     writeCommand(0xD3);
     writeCommand(0x08);
     writeCommand(0x40);
@@ -127,7 +113,7 @@ void OLED_init()
     writeCommand(0x81);
     writeCommand(0x4F);
     writeCommand(0xD9);
-    writeCommand(0x25);
+    writeCommand(0x22);
     writeCommand(0xDB);
     writeCommand(0x34);
     writeCommand(0xA4);
@@ -137,6 +123,9 @@ void OLED_init()
 
     writeCommand(0xAF);
 }
+
+
+
 
 void Blink(int count, uint32_t delay)
 {
@@ -152,49 +141,41 @@ void Blink(int count, uint32_t delay)
 int main() {
     stdio_init_all();
 
-    uint32_t outputMask = 0x00000000;
-    outputMask |= 1 << D0;
-    outputMask |= 1 << D1;
-    outputMask |= 1 << D2;
-    outputMask |= 1 << D3;
-    outputMask |= 1 << D4;
-    outputMask |= 1 << D5;
-    outputMask |= 1 << D6;
-    outputMask |= 1 << D7;
+    spi_init(spi_default, 5000 * 1000);
+    gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
+    gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
+    gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
 
-    outputMask |= 1 << CS;
-    outputMask |= 1 << DC;
-    outputMask |= 1 << RST;
-    outputMask |= 1 << EN;
-    outputMask |= 1 << RW;
-    outputMask |= 1 << LED;
+    // Make the SPI pins available to picotool
+    bi_decl(bi_3pins_with_func(PICO_DEFAULT_SPI_RX_PIN, PICO_DEFAULT_SPI_TX_PIN, PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI));
 
-    gpio_init_mask(outputMask);
-    gpio_set_dir_out_masked(outputMask);
-    
-    gpio_set_pulls(CS,false,true);
-    gpio_set_pulls(DC,false,true);
-    gpio_set_pulls(RST,false,true);
-    gpio_set_pulls(EN,false,true);
-    gpio_set_pulls(RW,false,true);
-   
+    // Chip select is active-low, so we'll initialise it to a driven-high state
+    gpio_init(PICO_DEFAULT_SPI_CSN_PIN);
+    gpio_set_dir(PICO_DEFAULT_SPI_CSN_PIN, GPIO_OUT);
+    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 1);
+
+    // Make the CS pin available to picotool
+    bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI CS"));
+
+
+
+    gpio_init(LED);
+    gpio_init(DC);
+    gpio_init(RST);
+    gpio_set_dir(DC, true);
+    gpio_set_dir(RST, true);
+    gpio_set_dir(LED, true);
+
     Blink(2,250);
     OLED_init();
     Blink(3,150);
     while (true) {
-        // gpio_put(DC,false);
-        // sleep_ms(100);
-        // gpio_put(DC,true);
-        // sleep_ms(100);
-        sleep_ms(1000);
-        Fill_RAM(0xff);
-        sleep_ms(2000);
-        Fill_RAM(0x00);
-        //writeCommand(0xE3);
-        //sleep_ms(1000);
-        //writeData(0x00);
-        //sleep_ms(1000);
 
+        Blink(1,50);
+        Fill_RAM(0xff);
+        sleep_ms(1000);
+        Fill_RAM(0x00);
+        sleep_ms(1000);
     }
     return 0;
 }
