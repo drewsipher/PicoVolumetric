@@ -1,35 +1,35 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
-#include "hardware/spi.h"
 
-// #define D0 0
-// #define D1 1
-// #define D2 2
-// #define D3 3
-// #define D4 4
-// #define D5 5
-// #define D6 6
-// #define D7 7
+#define D0 2
+#define D1 3
+#define D2 4
+#define D3 5
+#define D4 6
+#define D5 7
+#define D6 8
+#define D7 9
 
-// #define CS 28
+#define CS 17
 #define DC 27
 #define RST 26
-// #define EN 22
-// #define RW 21
+#define EN 20
+#define RW 19
 
 #define LED 25
 
+uint32_t pinMaskData = 0;
 
 static inline void cs_select() {
     asm volatile("nop \n nop \n nop");
-    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 0);  // Active low
+    gpio_put(CS, 0);  // Active low
     asm volatile("nop \n nop \n nop");
 }
 
 static inline void cs_deselect() {
     asm volatile("nop \n nop \n nop");
-    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 1);
+    gpio_put(CS, 1);
     asm volatile("nop \n nop \n nop");
 }
 
@@ -39,7 +39,10 @@ static void write_byte(uint8_t byte) {
     // buf[1] = data;
     buf[0] = byte;
     cs_select();
-    spi_write_blocking(spi_default, buf, 1);
+    
+    uint32_t val = 0x0000 | (byte << D0);
+    gpio_put_masked(pinMaskData, val);
+    
     cs_deselect();
     // sleep_ms(10);
 }
@@ -140,35 +143,16 @@ void Blink(int count, uint32_t delay)
 
 int main() {
     stdio_init_all();
+    pinMaskData = 1 << D0 | 1 << D1 | 1 << D2 | 1 << D3 | 1 << D4 | 1 << D5 | 1 << D6 | 1 << D7;
+    uint32_t pinMaskAll =  1 << LED | 1 << DC | 1 << RST | 1 << EN | 1 << CS | 1 << RW | pinMaskData;
 
-    spi_init(spi_default, 5000 * 1000);
-    gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
-
-    // Make the SPI pins available to picotool
-    bi_decl(bi_3pins_with_func(PICO_DEFAULT_SPI_RX_PIN, PICO_DEFAULT_SPI_TX_PIN, PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI));
-
-    // Chip select is active-low, so we'll initialise it to a driven-high state
-    gpio_init(PICO_DEFAULT_SPI_CSN_PIN);
-    gpio_set_dir(PICO_DEFAULT_SPI_CSN_PIN, GPIO_OUT);
-    gpio_put(PICO_DEFAULT_SPI_CSN_PIN, 1);
-
-    // Make the CS pin available to picotool
-    bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI CS"));
-
-
-
-    gpio_init(LED);
-    gpio_init(DC);
-    gpio_init(RST);
-    gpio_set_dir(DC, true);
-    gpio_set_dir(RST, true);
-    gpio_set_dir(LED, true);
+    gpio_init_mask(pinMaskAll);
+    gpio_set_dir_out_masked(pinMaskAll);
 
     Blink(2,250);
     OLED_init();
     Blink(3,150);
+
     while (true) {
 
         Blink(1,50);
