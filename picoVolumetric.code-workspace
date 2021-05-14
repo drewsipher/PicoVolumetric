@@ -6,6 +6,10 @@
 	],
 	"settings": {
 		"cmake.configureArgs": [
-		]
+		],
+		"files.associations": {
+			"cmath": "cpp",
+			"complex": "cpp"
+		}
 	}
 }

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 
@@ -152,14 +153,36 @@ int main() {
     Blink(2,250);
     OLED_init();
     Blink(3,150);
-
+    
     while (true) {
-
-        Blink(1,50);
-        Fill_RAM(0xff);
-        sleep_ms(1000);
+        for (int i = 0; i < 128; i++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                SetStartPage(y);
+                SetStartColumn(i);
+                writeData(0xff);
+            }
+            sleep_ms(10);
+        }
         Fill_RAM(0x00);
-        sleep_ms(1000);
+
+        for (int y = 7; y >= 0; y--)
+        {
+            SetStartPage(y);
+            uint8_t pixelVal = 0;
+            for (int p = 7; p >= 0; p--)
+            {
+                pixelVal |= 1 << p;
+                for (int i = 0; i < 128; i++)
+                {
+                    SetStartColumn(i);
+                    writeData(pixelVal);
+                }
+                sleep_ms(10);
+            }
+        }
+        Fill_RAM(0x00);
     }
     return 0;
 }
