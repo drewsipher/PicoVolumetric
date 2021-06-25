@@ -12,11 +12,11 @@
 #define D6 8
 #define D7 9
 
-#define CS 17
-#define DC 27
-#define RST 26
-#define EN 20
-#define RW 19
+#define CS 16
+#define DC 20
+#define RST 19
+#define EN 27
+#define RW 26
 
 #define LED 25
 
