@@ -1,8 +1,25 @@
 #include <stdio.h>
 #include <math.h>
 #include <vector>
+#include <cstdlib>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
+
+#define screenWidth 128
+#define screenHeight 56
+#define screenLines screenHeight/8
+
+struct pixel {
+    int x;
+    int y;
+    int z;  
+    uint8_t count;  
+};
+
+struct screenData 
+{
+    uint8_t data[screenWidth][screenLines];
+};
 
 #define D0 2
 #define D1 3
@@ -38,6 +55,19 @@ uint32_t pinMaskData = 0;
 uint32_t CS_All = CS01 | CS02 | CS03 | CS04 | CS05 | CS06 | CS07 | CS08 | CS09 | CS10 | CS11 | CS12;
 uint32_t CSToggle = 0;
 uint32_t CSbyIndex[numberOfScreens] = {CS01, CS02, CS03, CS04, CS05, CS06, CS07, CS08, CS09, CS10};
+
+
+
+void DrawScreens();
+void ClearScreens();
+void DrawPixel(pixel &p);
+
+
+
+
+screenData screens[numberOfScreens];
+
+
 
 static inline void cs_select() {
     asm volatile("nop \n nop \n nop");
@@ -101,20 +131,16 @@ void SetStartPage(uint8_t d)
     writeCommand(0xB0 | d);
 }
 
-void Fill_RAM(uint8_t data)
+void DrawToAll(uint8_t data)
 {
     uint8_t i, j;
     for (i = 0; i < 8; i++)
     {
         SetStartPage(i);
-        // sleep_ms(100);
         SetStartColumn(0x00);
-        // sleep_ms(100);
-
         for (j = 0; j < 128; j++)
         {
             writeData(data);
-            // sleep_ms(2);
         }
     }
 }
@@ -155,14 +181,50 @@ void OLED_init()
     writeCommand(0xA4);
     writeCommand(0xA6);
 
-    Fill_RAM(0x00);
+    DrawToAll(0x00);
 
     writeCommand(0xAF);
 
     deselectAll();
 }
 
+void ClearScreens()
+{
+    for (int i = 0; i < numberOfScreens; i++)
+    {
+        for (int x = 0; x < screenWidth; x++)
+        {
+            for (int y = 0; y < screenLines; y++)
+            {
+                screens[i].data[x][y] = 0x00;
+            }
+        }
+    }
+}
 
+void DrawScreens()
+{
+    
+    for (int i = 0; i < numberOfScreens; i++)
+    {
+        selectScreen(i);
+
+        for (int y = 0; y < screenLines; y++)
+        {
+            SetStartPage(y);
+            SetStartColumn(0x00);
+            for (int x = 0; x < screenWidth; x++)
+            {
+                writeData(screens[i].data[x][y]);
+            }
+        }
+    }
+}
+
+void DrawPixel(pixel &p)
+{
+    screens[p.z].data[p.x][p.y/8] |= 1 << (p.y % 8);
+}
 
 
 void Blink(int count, uint32_t delay)
@@ -176,6 +238,37 @@ void Blink(int count, uint32_t delay)
     }
 }
 
+std::vector<pixel> pixels;
+
+void AnimateRandomPoints()
+{
+        ClearScreens();
+        
+        pixel p = {uint8_t(rand() % screenWidth), uint8_t(rand() % screenHeight), uint8_t(rand() % numberOfScreens), 0};
+        pixels.push_back(p);
+
+        for (int i = 0; i < pixels.size(); i++)
+        {
+            DrawPixel(pixels[i]);
+        }
+
+        DrawScreens();
+        
+        for (int i = 0; i < pixels.size(); i++)
+        {
+            pixels[i].count++;
+        }
+        for (int i = 0; i < pixels.size(); i++)
+        {
+            if (pixels[i].count > 100)
+            {
+                pixels.erase(pixels.begin() + i);
+                i--;
+            }
+        }
+}
+
+
 int main() {
     stdio_init_all();
     pinMaskData = 1 << D0 | 1 << D1 | 1 << D2 | 1 << D3 | 1 << D4 | 1 << D5 | 1 << D6 | 1 << D7;
@@ -188,46 +281,19 @@ int main() {
     OLED_init();
     Blink(3,150);
     
-    uint8_t screenCount = 12;
+    ClearScreens();
+
+    
+    
     
     while (true) {
+
         
-        screenCount++;
-        if (screenCount >= numberOfScreens)
-        {
-            screenCount = 0;
-        }
-        selectScreen(screenCount);
-
-          for (int i = 0; i < 128; i++)
-            {
-                for (int y = 0; y < 8; y++)
-                {
-                    SetStartPage(y);
-                    SetStartColumn(i);
-                    writeData(0xff);
-                }
-                sleep_ms(10);
-            }
-            Fill_RAM(0x00);
-
-            for (int y = 7; y >= 0; y--)
-            {
-                SetStartPage(y);
-                uint8_t pixelVal = 0;
-                for (int p = 7; p >= 0; p--)
-                {
-                    pixelVal |= 1 << p;
-                    for (int i = 0; i < 128; i++)
-                    {
-                        SetStartColumn(i);
-                        writeData(pixelVal);
-                    }
-                    sleep_ms(10);
-                }
-            }
-            Fill_RAM(0x00);
+        AnimateRandomPoints();
+        
         
     }
     return 0;
 }
+
+
