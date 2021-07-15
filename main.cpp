@@ -10,9 +10,9 @@
 #define screenLines screenHeight/8
 
 struct pixel {
-    int x;
-    int y;
-    int z;  
+    float x;
+    float y;
+    float z;  
     uint8_t count;  
 };
 
@@ -221,10 +221,17 @@ void DrawScreens()
     }
 }
 
+void DrawPixel(int x, int y, int z)
+{
+    screens[z].data[x][y/8] |= 1 << (y % 8);
+}
+
 void DrawPixel(pixel &p)
 {
-    screens[p.z].data[p.x][p.y/8] |= 1 << (p.y % 8);
+    DrawPixel(p.x,p.y,p.z);
 }
+
+
 
 
 void Blink(int count, uint32_t delay)
@@ -238,13 +245,18 @@ void Blink(int count, uint32_t delay)
     }
 }
 
+bool IsPixelOutOfDisplay(pixel &p)
+{
+    return (p.z >= numberOfScreens || p.z < 0 || p.x < 0 || p.x >= screenWidth || p.y < 0 || p.y >= screenHeight);
+}
+
 std::vector<pixel> pixels;
 
 void AnimateRandomPoints()
 {
         ClearScreens();
         
-        pixel p = {uint8_t(rand() % screenWidth), uint8_t(rand() % screenHeight), uint8_t(rand() % numberOfScreens), 0};
+        pixel p = {float(rand() % screenWidth), float(rand() % screenHeight), float(rand() % numberOfScreens), 0};
         pixels.push_back(p);
 
         for (int i = 0; i < pixels.size(); i++)
@@ -268,6 +280,49 @@ void AnimateRandomPoints()
         }
 }
 
+const float centerX = screenWidth/2;
+const float centerY = screenHeight/2;
+
+void AnimateWarpDrive(float speed)
+{
+        ClearScreens();
+        int absSpeed = std::abs(speed);
+        int direction = speed < 0 ? -1 : 1;
+
+        for (int i = 0; i < pixels.size(); i++)
+        {
+            pixel p = pixels[i];
+            float xOffset = (((float)p.x / centerX) - 1.0f) * 1.5f;
+            float yOffset = (((float)p.y / centerY) - 1.0f) * 1.5f;
+            //for (int s = 0; s <= absSpeed; s++)
+            // {
+                // float z = p.z + s*direction;
+                // if (z >= numberOfScreens || z < 0)
+                //     continue;
+            //    DrawPixel(p.x, p.y, z);
+            // }
+              DrawPixel(p.x, p.y, p.z);
+            pixels[i].z += speed;
+            pixels[i].x += xOffset * speed;
+            pixels[i].y += yOffset * speed;
+        }
+
+        DrawScreens();
+        
+        
+        for (int i = 0; i < pixels.size(); i++)
+        {
+            pixel p = pixels[i];
+            if (IsPixelOutOfDisplay(p))
+            {
+                pixels[i].z = direction < 0 ? numberOfScreens - 1 : 0;
+                pixels[i].x = (rand() % screenWidth);
+                pixels[i].y = (rand() % screenHeight);
+            }
+        }
+        
+}
+
 
 int main() {
     stdio_init_all();
@@ -282,14 +337,26 @@ int main() {
     Blink(3,150);
     
     ClearScreens();
-
-    
     
     
     while (true) {
 
+        for (int f = 0; f < 300; f++)
+        {
+            AnimateRandomPoints();
+        }
+
+        for (int f = 30; f < 200; f++)
+        {
+            float perc = (float(f) / 100.0f);
+            float rads = perc * M_PI;
+            float cosine = (-std::cos(rads) + 1.0f);
+            float sin = std::sin(rads);
+            
+            AnimateWarpDrive(sin*cosine);
+            sleep_ms(30);
+        }
         
-        AnimateRandomPoints();
         
         
     }
