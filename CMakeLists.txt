@@ -19,6 +19,8 @@ enable_testing()
 
 add_executable(picoVolumetric main.cpp)
 
+target_sources(picoVolumetric PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Geometry.cpp")
+
 # Add pico_stdlib library which aggregates commonly used features
 target_link_libraries(picoVolumetric pico_stdlib hardware_spi)
 
