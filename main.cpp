@@ -10,7 +10,7 @@
 #define screenWidth 128
 #define screenHeight 56
 #define screenLines screenHeight/8
-#define numberOfScreens 10
+#define numberOfScreens 11
 #define screenVirtualDepth 50
 
 const float ZScale = (float)numberOfScreens / (float)screenVirtualDepth;
@@ -62,7 +62,7 @@ const uint32_t CS01 = 1 << 15;
 uint32_t pinMaskData = 0;
 uint32_t CS_All = CS01 | CS02 | CS03 | CS04 | CS05 | CS06 | CS07 | CS08 | CS09 | CS10 | CS11 | CS12;
 uint32_t CSToggle = 0;
-uint32_t CSbyIndex[numberOfScreens] = {CS01, CS02, CS03, CS04, CS05, CS06, CS07, CS08, CS09, CS10};
+uint32_t CSbyIndex[numberOfScreens] = {CS01, CS02, CS03, CS04, CS05, CS06, CS07, CS08, CS09, CS10, CS11};
 
 
 void DrawScreens();
@@ -429,7 +429,57 @@ void AnimateWarpDrive(float speed)
         
 }
 
-void AnimateSpinningCube(float speed)
+void AnimateSpinningCube(float speed, int count)
+{
+
+    ClearScreens();
+
+    cube = Geometry(ZScale);
+
+    float halfCubeSize = 14.0f;
+
+    cube.points.push_back(Vector3D(-halfCubeSize, -halfCubeSize, -halfCubeSize));
+    cube.points.push_back(Vector3D( halfCubeSize, -halfCubeSize, -halfCubeSize));
+    cube.points.push_back(Vector3D( halfCubeSize,  halfCubeSize, -halfCubeSize));
+    cube.points.push_back(Vector3D(-halfCubeSize,  halfCubeSize, -halfCubeSize));
+    cube.points.push_back(Vector3D(-halfCubeSize, -halfCubeSize,  halfCubeSize));
+    cube.points.push_back(Vector3D( halfCubeSize, -halfCubeSize,  halfCubeSize));
+    cube.points.push_back(Vector3D( halfCubeSize,  halfCubeSize,  halfCubeSize));
+    cube.points.push_back(Vector3D(-halfCubeSize,  halfCubeSize,  halfCubeSize));
+    
+    cube.indices = {0,1,1,2,2,3,3,0,4,5,5,6,6,7,7,4,0,4,1,5,2,6,3,7};
+    
+    float dx = (screenWidth/2.0f);
+    float dy = (screenHeight/2.0f);
+    float dz = (screenVirtualDepth/2.0f) ;
+
+    cube.Translate(dx,dy,dz);
+    
+    float deg = 0.0f;
+    float lastTranslate = 0.0f;
+    float translate = 0.0f;
+    while(count > 0)
+    {
+
+        float rad = (deg/180.0f) * M_PI;
+        
+        cube.SetAbsoluteRotation(rad, 0.0f, 1.0f, 0.0f);
+
+        translate = sin(rad) * 10.0f;
+        cube.Translate(translate-lastTranslate,0,0);
+        lastTranslate = translate;
+        
+        ClearScreens();
+        DrawGeometry(cube);
+
+        DrawScreens();
+
+        deg += 1.0f;
+        count--;
+    }
+}
+
+void AnimateSpinningMushroom(float speed)
 {
 
     ClearScreens();
@@ -492,25 +542,27 @@ int main() {
 
     while (true) {
 
-        // for (int f = 0; f < 500; f++)
-        // {
-        //     AnimateRandomPoints();
-        //     sleep_ms(30);
-        // }
+        for (int f = 0; f < 300; f++)
+        {
+            AnimateRandomPoints();
+            sleep_ms(30);
+        }
 
-        // for (int f = 0; f < 600; f++)
-        // {
-        //     float perc = (float(f) / 300.0f);
-        //     float rads = perc * M_PI;
-        //     float cosine = (-std::cos(rads) + 1.0f);
-        //     float sin = std::sin(rads);
+        for (int f = 0; f < 500; f++)
+        {
+            float perc = (float(f) / 300.0f);
+            float rads = perc * M_PI;
+            float cosine = (-std::cos(rads) + 1.0f);
+            float sin = std::sin(rads);
             
-        //     AnimateWarpDrive(sin*cosine*0.5f);
-        //     sleep_ms(30);
-        // }
+            AnimateWarpDrive(sin*cosine*0.5f);
+            sleep_ms(30);
+        }
 
-        AnimateSpinningCube(1);
+        AnimateSpinningCube(1, 4000);
+
         
+        //AnimateSpinningMushroom(1);
         
     }
     return 0;

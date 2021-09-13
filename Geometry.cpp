@@ -86,15 +86,6 @@ Vector3D Geometry::MultiplyMatrix(float matrix[4][4], Vector3D &point)
 
 void Geometry::ComputeModelMatrix()
 {
-    // for (int i = 0; i < 4; i++) {
-    //     for (int j = 0; j < 4; j++) {
-    //         int num = 0;
-    //         for (int k = 0; k < 4; k++) {
-    //             num += transformationMatrix[k][j] * rotationMatrix[i][k];
-    //         }
-    //         modelMatrix[i][j] = num;
-    //     }
-    // }
 
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
