@@ -13,6 +13,7 @@ This project is designed to highlight technical expertise in:
 - **3D Visualization**: Creating volumetric effects by rendering 2D slices of 3D objects across multiple transparent layers.
 - **Optimization**: Ensuring smooth performance and synchronization across hardware components.
 
+[picoVolumetric.webm](https://github.com/user-attachments/assets/05eb1894-b309-42dc-b263-25dacf232db5)
 
 ## Features
 
