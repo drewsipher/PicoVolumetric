@@ -13,6 +13,10 @@ This project is designed to highlight technical expertise in:
 - **3D Visualization**: Creating volumetric effects by rendering 2D slices of 3D objects across multiple transparent layers.
 - **Optimization**: Ensuring smooth performance and synchronization across hardware components.
 
+
+https://github.com/user-attachments/assets/86193182-3a65-417a-9f72-361c48ff7328
+
+
 ## Features
 
 - **Volumetric Rendering**: Displays 3D objects by stacking 2D images on transparent OLED screens.
